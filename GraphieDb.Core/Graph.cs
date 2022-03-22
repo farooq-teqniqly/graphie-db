@@ -35,8 +35,7 @@ namespace GraphieDb.Core
 
         public Node<TKey, TData> Find(TKey key)
         {
-            this.nodes.TryGetValue(key, out var node);
-            return node;
+            return this.GetNode(key);
         }
 
         
@@ -63,9 +62,27 @@ namespace GraphieDb.Core
             nodeConnections.Remove(second);
         }
 
+        public Node<TKey, TData> Update(TKey key, TData data)
+        {
+            var node = this.GetNode(key);
+            node.Data = data;
+
+            return node;
+        }
+
         public IEnumerable<Connection<TKey, TData>> GetConnections(TKey key)
         {
             return this.connections[key].Values;
+        }
+
+        private Node<TKey, TData> GetNode(TKey key)
+        {
+            if (!this.nodes.TryGetValue(key, out var node))
+            {
+                throw new GraphieDbException($"The node with key '{key}' does not exist.");
+            }
+
+            return node;
         }
 
         private SortedList<TKey, Connection<TKey, TData>> GetVertexEdges(TKey key)
@@ -77,6 +94,5 @@ namespace GraphieDb.Core
 
             return nodeConnections;
         }
-
     }
 }

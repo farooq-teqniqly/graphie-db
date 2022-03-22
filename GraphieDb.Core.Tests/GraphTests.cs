@@ -51,12 +51,6 @@ namespace GraphieDb.Core.Tests
         }
 
         [Fact]
-        public void Find_When_Node_Not_Found_Returns_Null()
-        {
-            this.personDb.Find("foo").Should().BeNull();
-        }
-
-        [Fact]
         public void Can_Connect_Two_Verticies()
         {
             var first = new Node<string, Person>(
@@ -181,7 +175,9 @@ namespace GraphieDb.Core.Tests
 
             this.personDb.Delete(v1.Key);
 
-            this.personDb.Find(v1.Key).Should().BeNull();
+            Action action = () => this.personDb.Find(v1.Key);
+            action.Should().Throw<GraphieDbException>()
+                .WithMessage("The node with key 'p1' does not exist.");
         }
 
         [Fact]
@@ -235,7 +231,26 @@ namespace GraphieDb.Core.Tests
             action.Should().Throw<GraphieDbException>()
                 .WithMessage("The node with key 'p1' does not exist.");
         }
-        
+
+        [Fact]
+        public void Can_Update_Node_Data()
+        {
+            var person = new Node<string, Person>("p1", new Person());
+            this.personDb.Add(person);
+            var updated = this.personDb.Update(person.Key, new Person() {Name = "foo"});
+
+            updated.Data.Name.Should().Be("foo");
+        }
+
+        [Fact]
+        public void Update_When_Node_Does_Not_Exist_Throws()
+        {
+            Action action = () => this.personDb.Update("foo", new Person() { Name = "foo" });
+
+            action.Should().Throw<GraphieDbException>()
+                .WithMessage("The node with key 'foo' does not exist.");
+        }
+
     }
 
     class Person
