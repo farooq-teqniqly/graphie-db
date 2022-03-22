@@ -19,7 +19,7 @@ namespace GraphieDb.Core.Tests
         public void Can_Find_Node()
         {
         
-            var person = new Vertex<string, Person>(
+            var person = new Node<string, Person>(
                 "person123", 
                 new Person { Name = "Farooq", HireDate = DateTime.Parse("3-21-2019") });
 
@@ -34,20 +34,20 @@ namespace GraphieDb.Core.Tests
         [Fact]
         public void Inserting_Duplicate_Key_Throws()
         {
-            personDb.Add(new Vertex<string, Person>(
+            personDb.Add(new Node<string, Person>(
                 "person123",
                 new Person {Name = "Farooq", HireDate = DateTime.Parse("3-21-2019")}));
 
             Action action = () =>
             {
-                personDb.Add(new Vertex<string, Person>(
+                personDb.Add(new Node<string, Person>(
                     "person123",
                     new Person {Name = "Bubba", HireDate = DateTime.Parse("3-21-2019")}));
             };
 
             action.Should()
                 .Throw<GraphieDbException>()
-                .WithMessage("The vertex with key 'person123' already exists.");
+                .WithMessage("The node with key 'person123' already exists.");
         }
 
         [Fact]
@@ -59,33 +59,183 @@ namespace GraphieDb.Core.Tests
         [Fact]
         public void Can_Connect_Two_Verticies()
         {
-            personDb.Add(new Vertex<string, Person>(
+            var first = new Node<string, Person>(
                 "person123",
-                new Person { Name = "Farooq", HireDate = DateTime.Parse("3-21-2019") }));
+                new Person { Name = "Farooq", HireDate = DateTime.Parse("3-21-2019") });
+            
+            personDb.Add(first);
 
-            personDb.Add(new Vertex<string, Person>(
+            var second = new Node<string, Person>(
                 "person456",
-                new Person { Name = "Bubba", HireDate = DateTime.Parse("6-17-2020") }));
+                new Person { Name = "Bubba", HireDate = DateTime.Parse("6-17-2020") });
 
-            personDb.Connect(this.personDb.Find("person123"), this.personDb.Find("person456"));
+            personDb.Add(second);
 
-            var edges = personDb.GetEdges("person123");
+            personDb.Connect(first, second);
+
+            var edges = personDb.GetEdges(first.Key);
 
             edges.Count().Should().Be(1);
         }
 
         [Fact]
-        public void GetEdges_When_Vertex_Not_Connected_Returns_Null()
+        public void GetEdges_When_Node_Not_Connected_Returns_Empty_List()
         {
-            personDb.Add(new Vertex<string, Person>(
+            var person = new Node<string, Person>(
                 "person123",
-                new Person { Name = "Farooq", HireDate = DateTime.Parse("3-21-2019") }));
+                new Person { Name = "Farooq", HireDate = DateTime.Parse("3-21-2019") });
 
-            var edges = personDb.GetEdges("person123");
+            personDb.Add(person);
+
+            var edges = personDb.GetEdges(person.Key);
 
             edges.Count().Should().Be(0);
         }
 
+        [Fact]
+        public void Connect_When_Verticies_Already_Connected_Throws()
+        {
+            var first = new Node<string, Person>(
+                "person123",
+                new Person { Name = "Farooq", HireDate = DateTime.Parse("3-21-2019") });
+
+            personDb.Add(first);
+
+            var second = new Node<string, Person>(
+                "person456",
+                new Person { Name = "Bubba", HireDate = DateTime.Parse("6-17-2020") });
+
+            personDb.Add(second);
+
+            personDb.Connect(first, second);
+
+            Action action = () => personDb.Connect(first, second);
+
+            action.Should()
+                .Throw<GraphieDbException>()
+                .WithMessage("The node with key 'person123' is already connected to node with key 'person456'");
+        }
+
+        [Fact]
+        public void Node_Can_Have_Multiple_Connections()
+        {
+            var v1 = new Node<string, Person>("p1", new Person());
+            var v2 = new Node<string, Person>("p2", new Person());
+            var v3 = new Node<string, Person>("p3", new Person());
+            var v4 = new Node<string, Person>("p4", new Person());
+            
+            this.personDb.Add(v1);
+            this.personDb.Add(v2);
+            this.personDb.Add(v3);
+            this.personDb.Add(v4);
+
+            this.personDb.Connect(v1, v2);
+            this.personDb.Connect(v1, v3);
+            this.personDb.Connect(v1, v4);
+
+            var edges = personDb.GetEdges(v1.Key);
+
+            edges.Count().Should().Be(3);
+        }
+
+        [Fact]
+        public void Can_Disconnect()
+        {
+            var v1 = new Node<string, Person>("p1", new Person());
+            var v2 = new Node<string, Person>("p2", new Person());
+
+            this.personDb.Add(v1);
+            this.personDb.Add(v2);
+
+            this.personDb.Connect(v1, v2);
+
+            this.personDb.Disconnect(v1.Key, v2.Key);
+
+            this.personDb.GetEdges(v1.Key).Count().Should().Be(0);
+        }
+
+        [Fact]
+        public void Disconnect_When_Verticies_Not_Connected_Throws()
+        {
+            var v1 = new Node<string, Person>("p1", new Person());
+            var v2 = new Node<string, Person>("p2", new Person());
+
+            this.personDb.Add(v1);
+            this.personDb.Add(v2);
+
+            Action action = () => this.personDb.Disconnect(v1.Key, v2.Key);
+
+            action.Should().Throw<GraphieDbException>()
+                .WithMessage("Node with key 'p1' is not connected to node with key 'p2'.");
+            
+        }
+
+        [Fact]
+        public void Can_Delete_Node()
+        {
+            var v1 = new Node<string, Person>("p1", new Person());
+            var v2 = new Node<string, Person>("p2", new Person());
+
+            this.personDb.Add(v1);
+            this.personDb.Add(v2);
+
+            this.personDb.Delete(v1.Key);
+
+            this.personDb.Find(v1.Key).Should().BeNull();
+        }
+
+        [Fact]
+        public void Delete_When_Node_Does_Not_Exist_Throws()
+        {
+            Action action = () => this.personDb.Delete("foo");
+
+            action.Should().Throw<GraphieDbException>()
+                .WithMessage("The node with key 'foo' does not exist.");
+
+        }
+
+        [Fact]
+        public void Connect_When_Node_Does_Not_Exist_Throws()
+        {
+            var v1 = new Node<string, Person>("p1", new Person());
+            var v2 = new Node<string, Person>("p2", new Person());
+
+            Action action = () => this.personDb.Connect(v1, v2);
+
+            action.Should().Throw<GraphieDbException>()
+                .WithMessage("The node with key 'p1' does not exist.");
+        }
+
+        [Fact]
+        public void Delete_Connected_Node_Throws()
+        {
+            var v1 = new Node<string, Person>("p1", new Person());
+            var v2 = new Node<string, Person>("p2", new Person());
+
+            this.personDb.Add(v1);
+            this.personDb.Add(v2);
+
+            this.personDb.Connect(v1, v2);
+
+            Action action = () => this.personDb.Delete(v1.Key);
+
+            action.Should().Throw<GraphieDbException>()
+                .WithMessage("The node with key 'p1' cannot be deleted because it is connected. " +
+                             "Delete all connections associated with this node before deleting this node.");
+        }
+
+        [Fact]
+        public void Disconnect_When_First_Node_Does_Not_Exist_Throws()
+        {
+            var v1 = new Node<string, Person>("p1", new Person());
+            var v2 = new Node<string, Person>("p2", new Person());
+
+            Action action = () => this.personDb.Disconnect(v1.Key, v2.Key);
+
+            action.Should().Throw<GraphieDbException>()
+                .WithMessage("The node with key 'p1' does not exist.");
+        }
+        
     }
 
     class Person
