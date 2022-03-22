@@ -73,9 +73,9 @@ namespace GraphieDb.Core.Tests
 
             personDb.Connect(first, second);
 
-            var edges = personDb.GetEdges(first.Key);
+            var connections = personDb.GetConnections(first.Key);
 
-            edges.Count().Should().Be(1);
+            connections.Count().Should().Be(1);
         }
 
         [Fact]
@@ -87,9 +87,9 @@ namespace GraphieDb.Core.Tests
 
             personDb.Add(person);
 
-            var edges = personDb.GetEdges(person.Key);
+            var connections = personDb.GetConnections(person.Key);
 
-            edges.Count().Should().Be(0);
+            connections.Count().Should().Be(0);
         }
 
         [Fact]
@@ -133,9 +133,9 @@ namespace GraphieDb.Core.Tests
             this.personDb.Connect(v1, v3);
             this.personDb.Connect(v1, v4);
 
-            var edges = personDb.GetEdges(v1.Key);
+            var connections = personDb.GetConnections(v1.Key);
 
-            edges.Count().Should().Be(3);
+            connections.Count().Should().Be(3);
         }
 
         [Fact]
@@ -151,7 +151,7 @@ namespace GraphieDb.Core.Tests
 
             this.personDb.Disconnect(v1.Key, v2.Key);
 
-            this.personDb.GetEdges(v1.Key).Count().Should().Be(0);
+            this.personDb.GetConnections(v1.Key).Count().Should().Be(0);
         }
 
         [Fact]
