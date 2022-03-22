@@ -6,8 +6,14 @@ namespace GraphieDb.Core
 {
     public class Graph<TKey, TData>
     {
+        public bool Directed { get; }
         private readonly Dictionary<TKey, Node<TKey, TData>> nodes = new();
-        private readonly Dictionary<TKey, SortedList<TKey, Connection<TKey, TData>>> connections = new ();
+        private readonly Dictionary<TKey, SortedList<TKey, Connection<TKey>>> connections = new ();
+
+        public Graph(bool directed = false)
+        {
+            Directed = directed;
+        }
 
         public void Add(Node<TKey,TData> node)
         {
@@ -16,7 +22,7 @@ namespace GraphieDb.Core
                 throw new GraphieDbException($"The node with key '{node.Key}' already exists.");
             }
 
-            this.connections.Add(node.Key, new SortedList<TKey, Connection<TKey, TData>>());
+            this.connections.Add(node.Key, new SortedList<TKey, Connection<TKey>>());
         }
 
         public void Delete(TKey key)
@@ -39,15 +45,23 @@ namespace GraphieDb.Core
         }
 
         
-        public void Connect(Node<TKey, TData> first, Node<TKey, TData> second)
+        public void Connect(TKey first, TKey second, object connectionData = null)
         {
-            var nodeConnections = this.GetVertexEdges(first.Key);
+            var nodeConnections = this.GetVertexEdges(first);
             
-            if (!nodeConnections.TryAdd(second.Key, new Connection<TKey, TData>(first, second)))
+            if (!nodeConnections.TryAdd(second, new Connection<TKey>(first, second, connectionData)))
             {
                 throw new GraphieDbException(
-                    $"The node with key '{first.Key}' is already connected to node with key '{second.Key}'");
+                    $"The node with key '{first}' is already connected to node with key '{second}'");
             }
+
+            if (!this.Directed)
+            {
+                return;
+            }
+
+            nodeConnections = this.GetVertexEdges(second);
+            nodeConnections.Add(first, new Connection<TKey>(second, first, connectionData));
         }
 
         public void Disconnect(TKey first, TKey second)
@@ -60,6 +74,14 @@ namespace GraphieDb.Core
             }
 
             nodeConnections.Remove(second);
+
+            if (!this.Directed)
+            {
+                return;
+            }
+
+            nodeConnections = this.GetVertexEdges(second);
+            nodeConnections.Remove(first);
         }
 
         public Node<TKey, TData> Update(TKey key, TData data)
@@ -70,7 +92,7 @@ namespace GraphieDb.Core
             return node;
         }
 
-        public IEnumerable<Connection<TKey, TData>> GetConnections(TKey key)
+        public IEnumerable<Connection<TKey>> GetConnections(TKey key)
         {
             return this.connections[key].Values;
         }
@@ -85,7 +107,7 @@ namespace GraphieDb.Core
             return node;
         }
 
-        private SortedList<TKey, Connection<TKey, TData>> GetVertexEdges(TKey key)
+        private SortedList<TKey, Connection<TKey>> GetVertexEdges(TKey key)
         {
             if (!this.connections.TryGetValue(key, out var nodeConnections))
             {

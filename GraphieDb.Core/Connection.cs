@@ -1,9 +1,15 @@
 ﻿namespace GraphieDb.Core
 {
-    public class Connection<TKey, TData>
+    public class Connection<TKey>
     {
-        public Connection(Node<TKey, TData> first, Node<TKey, TData> second)
+        public object Data { get; }
+        public TKey First { get; }
+        public TKey Second { get; }
+        public Connection(TKey first, TKey second, object data = null)
         {
+            this.Data = data;
+            this.First = first;
+            this.Second = second;
             
         }
     }
